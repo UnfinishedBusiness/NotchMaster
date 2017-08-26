@@ -1,116 +1,61 @@
-#!/usr/bin/perl -w
+#!/bin/perl -w
+use Tk;
+use Tk::LabFrame;
 
-use Math::Trig;
+my $mw = MainWindow->new;
+$mw->title("NotchMaster");
+#$mw->geometry ("900x600");
+$profile_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Profile', -labelside => 'acrosstop');
+$profile_frame->Label(-text => "Tube Length")->pack(-side => 'top');
+$profile_frame->Entry(-textvariable=>$Profile_Length)->pack();
 
-$num_args = $#ARGV + 1;
-if ($num_args != 5 ) {
-    print "\nUsage: notch [#1 Branch Diameter] [#2 Header Diameter] [#3 Wall Thickness] [#4 Angle] [#5 Filename]\n";
-    exit;
+$side1_radio = $profile_frame->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 1', -labelside => 'acrosstop');
+foreach (qw/notch slice/) {
+    $side1_radio->Radiobutton(-text => $_, -variable => \$Profile_Side1,
+        -value => $_)->pack(-anchor => 'w');
 }
+$side1_radio->pack(-side => 'left');
 
-# (2) we got two command line args, so assume they are the
-# first name and last name
-$Branch_Diamter=$ARGV[0];
-$Header_Diameter=$ARGV[1];
-$Wall_Thickness=$ARGV[2];
-$Angle=$ARGV[3];
-$filename=$ARGV[4];
-
-open($fh, '>', $filename) or die "Could not open file '$filename' $!";
-
-sub degree_sine {
-    my $degrees = shift;
-    my $radians = deg2rad($degrees);
-    my $result = sin($radians);
-
-    return $result;
+$side2_radio = $profile_frame->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 2', -labelside => 'acrosstop');
+foreach (qw/notch slice disable/) {
+    $side2_radio->Radiobutton(-text => $_, -variable => \$Profile_Side2,
+        -value => $_)->pack(-anchor => 'w');
 }
-sub degree_cosine {
-    my $degrees = shift;
-    my $radians = deg2rad($degrees);
-    my $result = cos($radians);
+$side2_radio->pack(-side => 'right');
 
-    return $result;
-}
-sub degree_tangent {
-    my $degrees = shift;
-    my $radians = deg2rad($degrees);
-    my $result = tan($radians);
+$profile_frame->pack(-side => 'top');
 
-    return $result;
-}
+$side1_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 1', -labelside => 'acrosstop');
+$side1_frame->Label(-text => "Branch Diameter")->pack(-side => 'top');
+$side1_frame->Entry(-textvariable=>$Side1_BranchDiamter)->pack();
+$side1_frame->Label(-text => "Header Diameter")->pack(-side => 'top');
+$side1_frame->Entry(-textvariable=>$Side1_HeaderDiamter)->pack();
+$side1_frame->Label(-text => "Branch Wall Thickness")->pack(-side => 'top');
+$side1_frame->Entry(-textvariable=>$Side1_BranchWallThickness)->pack();
+$side1_frame->Label(-text => "Mate Angle")->pack(-side => 'top');
+$side1_frame->Entry(-textvariable=>$Side1_BranchMateAngle)->pack();
+$side1_frame->pack(-side => 'left');
 
-sub Gcode_Header()
-{
-  print $fh "G20\nG64 P0.001\n";
-}
-sub Gcode_NotchSpecifiedAngle
-{
-  my $angle = shift;
-  $RO = $Branch_Diamter / 2;
-  $RU = $Header_Diameter / 2;
-  $RI = $RO - $Wall_Thickness;
-  $AF = $Angle;
-  $ID = 0;
-  $A_Axis_Angle = 1;
-  for (my $i=0; $i < $angle; $i++)
-  {
-    $Y = sqrt($RU **2 - (($RI * degree_sine($ID)) **2)) / degree_sine($AF) - degree_tangent(90 - $AF) * $RI * degree_cosine($ID);
-    $ID=$ID + 1;
-    $A_Axis_Angle = $A_Axis_Angle + 1;
-  	#300=[#300+2]
-    $Ysimple = sprintf("%.4f", $Y);  # 1.56
+$side2_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 2', -labelside => 'acrosstop');
+$side2_frame->Label(-text => "Branch Diameter")->pack(-side => 'top');
+$side2_frame->Entry(-textvariable=>$Side2_BranchDiamter)->pack();
+$side2_frame->Label(-text => "Header Diameter")->pack(-side => 'top');
+$side2_frame->Entry(-textvariable=>$Side2_HeaderDiamter)->pack();
+$side2_frame->Label(-text => "Branch Wall Thickness")->pack(-side => 'top');
+$side2_frame->Entry(-textvariable=>$Side2_BranchWallThickness)->pack();
+$side2_frame->Label(-text => "Mate Angle")->pack(-side => 'top');
+$side2_frame->Entry(-textvariable=>$Side2_BranchMateAngle)->pack();
+$side2_frame->pack(-side => 'right');
 
-  }
-  if ($angle == 1)
-  {
-    return "G0 A$A_Axis_Angle Y$Ysimple\nF50\n";
-  }
-  return "G1 A$A_Axis_Angle Y$Ysimple\n";
-}
-sub Gcode_NotchLoop()
-{
-  #100= #1   (Branch Diameter)
-  #101= #2      (Header Diameter)
-  #103= #3        ( Tube Thickness )
-  #104= #4            (Joint ANGLE)
+$Paramaters_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Parameters', -labelside => 'acrosstop');
+$Paramaters_frame->Label(-text => "Filename")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>$Parameters_Filename)->pack();
+$Paramaters_frame->Label(-text => "Feedrate")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>$Parameters_Feedrate)->pack();
+$button_frame = $Paramaters_frame->Frame(-borderwidth => 2, -relief => 'groove');
+$button_frame->Button(-text => 'Quit', -command => sub { exit; })->pack(-side => 'left');
+$button_frame->Button(-text => 'Post', -command => sub {  })->pack(-side => 'right');
+$button_frame->pack;
+$Paramaters_frame->pack(-side => 'bottom');
 
-  #200 = [#100 / 2]         (RO)
-  #201 = [#101 / 2]         (RU)
-  #202 = [#200 - #103]  (RI)
-  #203 = #104                (AF)
-  #204 = 0                       (ID)
-  #300= 2                       (A step in deg)
-  #G0 A#300 Y[sqrt [#201 **2 - [ [#202 * sin [#204]] **2]] /  sin[#203] -  tan [90-#203] * #202 * cos[#204]]
-	#204=[#204+2]
-	#300=[#300+2]
-
-  $RO = $Branch_Diamter / 2;
-  $RU = $Header_Diameter / 2;
-  $RI = $RO - $Wall_Thickness;
-  $AF = $Angle;
-  $ID = 0;
-  $A_Axis_Angle = 2;
-  for (my $i=0; $i < 180; $i++)
-  {
-    $Y = sqrt($RU **2 - (($RI * degree_sine($ID)) **2)) / degree_sine($AF) - degree_tangent(90 - $AF) * $RI * degree_cosine($ID);
-    $ID=$ID + 2;
-    $A_Axis_Angle = $A_Axis_Angle + 2;
-  	#300=[#300+2]
-    $Ysimple = sprintf("%.4f", $Y);  # 1.56
-    print $fh "G0 A$A_Axis_Angle Y$Ysimple\n";
-  }
-}
-sub Gcode_Footer()
-{
-  print $fh "M5\nM30\n";
-}
-
-print "Creating a notch at $Angle degrees with branch diameter of $Branch_Diamter and wall thickness of $Wall_Thickness to mate with a header diameter of $Header_Diameter!\n";
-
-Gcode_Header();
-
-Gcode_NotchLoop();
-
-Gcode_Footer();
-close $fh;
+MainLoop;
