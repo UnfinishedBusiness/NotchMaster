@@ -2,6 +2,9 @@
 use Tk;
 use Tk::LabFrame;
 use Storable;
+use Math::Trig;
+
+my $mw = MainWindow->new;
 
 $Profile_Length = 10;
 $Profile_Side1 = "notch";
@@ -79,13 +82,114 @@ sub fetchData
   }
   else
   {
-    print "Can't fetch data!";
+    #print "Can't fetch data!";
   }
+}
+sub degree_sine {
+    my $degrees = shift;
+    my $radians = deg2rad($degrees);
+    my $result = sin($radians);
+
+    return $result;
+}
+sub degree_cosine {
+    my $degrees = shift;
+    my $radians = deg2rad($degrees);
+    my $result = cos($radians);
+
+    return $result;
+}
+sub degree_tangent {
+    my $degrees = shift;
+    my $radians = deg2rad($degrees);
+    my $result = tan($radians);
+
+    return $result;
+}
+sub Gcode_CalculateNotch
+{
+  $Branch_Diamter = shift;
+  $Header_Diameter = shift;
+  $Wall_Thickness = shift;
+  $Angle = shift;
+
+  my $GcodeBlock = "";
+  my $Awords = "";
+  my $Ywords = "";
+
+  $RO = $Branch_Diamter / 2;
+  $RU = $Header_Diameter / 2;
+  $RI = $RO - $Wall_Thickness;
+  $AF = $Angle;
+  $ID = 0;
+  $A_Axis_Angle = 2;
+  for (my $i=0; $i < 180; $i++)
+  {
+    $Y = sqrt($RU **2 - (($RI * degree_sine($ID)) **2)) / degree_sine($AF) - degree_tangent(90 - $AF) * $RI * degree_cosine($ID);
+    $ID=$ID + 2;
+    $A_Axis_Angle = $A_Axis_Angle + 2;
+  	#300=[#300+2]
+    $Ysimple = sprintf("%.4f", $Y);  # 1.56
+    #$GcodeBlock .= "G1 A$A_Axis_Angle Y$Ysimple F$Parameters_Feedrate\n";
+    $Awords .= "$A_Axis_Angle\n";
+    $Ywords .= "$Ysimple\n";
+  }
+  $smallestY = 100; #Big default, lower the value as we see smaller ones
+  my @lines = split /\n/, $Ywords;
+  foreach my $line (@lines)
+  {
+    chomp $line;
+    if ($line < $smallestY)
+    {
+      $smallestY = $line;
+    }
+  }
+  #print "Offset is $smallestY\n"; #Works!
+  my @Yword_lines = split /\n/, $Ywords;
+  #my @Aword_lines = split /\n/, $Awords; #Returns 2 degree increments to 360
+  for( $i = 0; $i < @Yword_lines; $i++ )
+  {
+    $Yoffset = $Yword_lines[$i] - $smallestY;
+   #print "Y$Yoffset\n";
+   $GcodeBlock .= "Y$Yoffset\n";
+  }
+  return $GcodeBlock;
+}
+
+sub postGcode
+{
+  if ($Profile_Side1 eq "notch" && $Profile_Side2 eq "disable")
+  {
+    $Yoffsets = Gcode_CalculateNotch($Side1_BranchDiamter, $Side1_HeaderDiamter, $Side1_BranchWallThickness, $Side1_BranchMateAngle);
+    $mw->messageBox(-title => 'Post', -message => 'Posting with Side 1 notch and Side 2 Disabled!', -type => 'ok', -default => 'ok');
+    my @Gcode_lines = split /\n/, $Yoffsets;
+    $A_word = 2;
+
+    if (open(my $fh, '>:encoding(UTF-8)', $Parameters_Filename))
+    {
+      print $fh "G20\nG64 P0.001\n";
+      print $fh "G0 A$A_word $Gcode_lines[0]\n\n";
+      #Touchoff here
+      for( $i = 1; $i < @Gcode_lines; $i++ )
+      {
+        $A_word += 2;
+        print $fh "G1 A$A_word $Gcode_lines[$i] F$Parameters_Feedrate\n";
+      }
+      print $fh "\nM5\nM30";
+      close($fh);
+    }
+    else
+    {
+      $mw->messageBox(-title => 'Post', -message => 'Could not write file!', -type => 'ok', -default => 'ok');
+    }
+    return;
+  }
+  $mw->messageBox(-title => 'Post', -message => 'Not Implemented Yet', -type => 'ok', -default => 'ok');
+  return;
 }
 
 fetchData();
 
-my $mw = MainWindow->new;
 $mw->title("NotchMaster");
 #$mw->geometry ("900x600");
 $profile_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Profile', -labelside => 'acrosstop');
@@ -137,7 +241,7 @@ $Paramaters_frame->Label(-text => "Feedrate")->pack(-side => 'top');
 $Paramaters_frame->Entry(-textvariable=>\$Parameters_Feedrate)->pack();
 $button_frame = $Paramaters_frame->Frame(-borderwidth => 2, -relief => 'groove');
 $button_frame->Button(-text => 'Quit', -command => sub { storeData(); exit; })->pack(-side => 'left');
-$button_frame->Button(-text => 'Post', -command => sub {  })->pack(-side => 'right');
+$button_frame->Button(-text => 'Post', -command => sub { storeData(); postGcode(); })->pack(-side => 'right');
 $button_frame->pack;
 $Paramaters_frame->pack(-side => 'bottom');
 
