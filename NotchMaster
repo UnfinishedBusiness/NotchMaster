@@ -1,13 +1,96 @@
-#!/bin/perl -w
+#!/usr/bin/perl -w
 use Tk;
 use Tk::LabFrame;
+use Storable;
+
+$Profile_Length = 10;
+$Profile_Side1 = "notch";
+$Profile_Side2 = "disable";
+$Side1_BranchDiamter = 1.750;
+$Side1_HeaderDiamter = 1.750;
+$Side1_BranchWallThickness = 0.120;
+$Side1_BranchMateAngle = 90;
+$Side2_BranchDiamter = 1.750;
+$Side2_HeaderDiamter = 1.750;
+$Side2_BranchWallThickness = 0.120;
+$Side2_BranchMateAngle = 90;
+$Parameters_Filename = "0.ngc";
+$Parameters_Feedrate = 60;
+
+$DataFile = "/tmp/.NotchMaster";
+
+
+sub storeData
+{
+  if (open(my $fh, '>:encoding(UTF-8)', $DataFile))
+  {
+    print $fh "$Profile_Length\n";
+    print $fh "$Profile_Side1\n";
+    print $fh "$Profile_Side2\n";
+    print $fh "$Side1_BranchDiamter\n";
+    print $fh "$Side1_HeaderDiamter\n";
+    print $fh "$Side1_BranchWallThickness\n";
+    print $fh "$Side1_BranchMateAngle\n";
+    print $fh "$Side2_BranchDiamter\n";
+    print $fh "$Side2_HeaderDiamter\n";
+    print $fh "$Side2_BranchWallThickness\n";
+    print $fh "$Side2_BranchMateAngle\n";
+    print $fh "$Parameters_Filename\n";
+    print $fh "$Parameters_Feedrate\n";
+    close($fh);
+  }
+  else
+  {
+    print "Can't store data!";
+  }
+}
+sub fetchData
+{
+  if (open(my $fh, '<:encoding(UTF-8)', $DataFile))
+  {
+    $Profile_Length = <$fh>;
+    $Profile_Side1 = <$fh>;
+    $Profile_Side2 = <$fh>;
+    $Side1_BranchDiamter = <$fh>;
+    $Side1_HeaderDiamter = <$fh>;
+    $Side1_BranchWallThickness = <$fh>;
+    $Side1_BranchMateAngle = <$fh>;
+    $Side2_BranchDiamter = <$fh>;
+    $Side2_HeaderDiamter = <$fh>;
+    $Side2_BranchWallThickness = <$fh>;
+    $Side2_BranchMateAngle = <$fh>;
+    $Parameters_Filename = <$fh>;
+    $Parameters_Feedrate = <$fh>;
+    close($fh);
+
+    chomp $Profile_Length;
+    chomp $Profile_Side1;
+    chomp $Profile_Side2;
+    chomp $Side1_BranchDiamter;
+    chomp $Side1_HeaderDiamter;
+    chomp $Side1_BranchWallThickness;
+    chomp $Side1_BranchMateAngle;
+    chomp $Side2_BranchDiamter;
+    chomp $Side2_HeaderDiamter;
+    chomp $Side2_BranchWallThickness;
+    chomp $Side2_BranchMateAngle;
+    chomp $Parameters_Filename;
+    chomp $Parameters_Feedrate;
+  }
+  else
+  {
+    print "Can't fetch data!";
+  }
+}
+
+fetchData();
 
 my $mw = MainWindow->new;
 $mw->title("NotchMaster");
 #$mw->geometry ("900x600");
 $profile_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Profile', -labelside => 'acrosstop');
 $profile_frame->Label(-text => "Tube Length")->pack(-side => 'top');
-$profile_frame->Entry(-textvariable=>$Profile_Length)->pack();
+$profile_frame->Entry(-textvariable=>\$Profile_Length)->pack();
 
 $side1_radio = $profile_frame->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 1', -labelside => 'acrosstop');
 foreach (qw/notch slice/) {
@@ -27,33 +110,33 @@ $profile_frame->pack(-side => 'top');
 
 $side1_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 1', -labelside => 'acrosstop');
 $side1_frame->Label(-text => "Branch Diameter")->pack(-side => 'top');
-$side1_frame->Entry(-textvariable=>$Side1_BranchDiamter)->pack();
+$side1_frame->Entry(-textvariable=>\$Side1_BranchDiamter)->pack();
 $side1_frame->Label(-text => "Header Diameter")->pack(-side => 'top');
-$side1_frame->Entry(-textvariable=>$Side1_HeaderDiamter)->pack();
+$side1_frame->Entry(-textvariable=>\$Side1_HeaderDiamter)->pack();
 $side1_frame->Label(-text => "Branch Wall Thickness")->pack(-side => 'top');
-$side1_frame->Entry(-textvariable=>$Side1_BranchWallThickness)->pack();
+$side1_frame->Entry(-textvariable=>\$Side1_BranchWallThickness)->pack();
 $side1_frame->Label(-text => "Mate Angle")->pack(-side => 'top');
-$side1_frame->Entry(-textvariable=>$Side1_BranchMateAngle)->pack();
+$side1_frame->Entry(-textvariable=>\$Side1_BranchMateAngle)->pack();
 $side1_frame->pack(-side => 'left');
 
 $side2_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 2', -labelside => 'acrosstop');
 $side2_frame->Label(-text => "Branch Diameter")->pack(-side => 'top');
-$side2_frame->Entry(-textvariable=>$Side2_BranchDiamter)->pack();
+$side2_frame->Entry(-textvariable=>\$Side2_BranchDiamter)->pack();
 $side2_frame->Label(-text => "Header Diameter")->pack(-side => 'top');
-$side2_frame->Entry(-textvariable=>$Side2_HeaderDiamter)->pack();
+$side2_frame->Entry(-textvariable=>\$Side2_HeaderDiamter)->pack();
 $side2_frame->Label(-text => "Branch Wall Thickness")->pack(-side => 'top');
-$side2_frame->Entry(-textvariable=>$Side2_BranchWallThickness)->pack();
+$side2_frame->Entry(-textvariable=>\$Side2_BranchWallThickness)->pack();
 $side2_frame->Label(-text => "Mate Angle")->pack(-side => 'top');
-$side2_frame->Entry(-textvariable=>$Side2_BranchMateAngle)->pack();
+$side2_frame->Entry(-textvariable=>\$Side2_BranchMateAngle)->pack();
 $side2_frame->pack(-side => 'right');
 
 $Paramaters_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Parameters', -labelside => 'acrosstop');
 $Paramaters_frame->Label(-text => "Filename")->pack(-side => 'top');
-$Paramaters_frame->Entry(-textvariable=>$Parameters_Filename)->pack();
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_Filename)->pack();
 $Paramaters_frame->Label(-text => "Feedrate")->pack(-side => 'top');
-$Paramaters_frame->Entry(-textvariable=>$Parameters_Feedrate)->pack();
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_Feedrate)->pack();
 $button_frame = $Paramaters_frame->Frame(-borderwidth => 2, -relief => 'groove');
-$button_frame->Button(-text => 'Quit', -command => sub { exit; })->pack(-side => 'left');
+$button_frame->Button(-text => 'Quit', -command => sub { storeData(); exit; })->pack(-side => 'left');
 $button_frame->Button(-text => 'Post', -command => sub {  })->pack(-side => 'right');
 $button_frame->pack;
 $Paramaters_frame->pack(-side => 'bottom');
