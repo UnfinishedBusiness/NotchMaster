@@ -28,6 +28,7 @@ sub storeData
   if (open(my $fh, '>:encoding(UTF-8)', $DataFile))
   {
     print $fh "$Profile_Length\n";
+    print $fh "$Profile_RelativeOrientation\n";
     print $fh "$Profile_Side1\n";
     print $fh "$Profile_Side2\n";
     print $fh "$Side1_BranchDiamter\n";
@@ -39,6 +40,7 @@ sub storeData
     print $fh "$Side2_BranchWallThickness\n";
     print $fh "$Side2_BranchMateAngle\n";
     print $fh "$Parameters_Filename\n";
+    print $fh "$Parameters_Touchoff\n";
     print $fh "$Parameters_Feedrate\n";
     close($fh);
   }
@@ -52,6 +54,7 @@ sub fetchData
   if (open(my $fh, '<:encoding(UTF-8)', $DataFile))
   {
     $Profile_Length = <$fh>;
+    $Profile_RelativeOrientation = <$fh>;
     $Profile_Side1 = <$fh>;
     $Profile_Side2 = <$fh>;
     $Side1_BranchDiamter = <$fh>;
@@ -63,10 +66,12 @@ sub fetchData
     $Side2_BranchWallThickness = <$fh>;
     $Side2_BranchMateAngle = <$fh>;
     $Parameters_Filename = <$fh>;
+    $Parameters_Touchoff = <$fh>;
     $Parameters_Feedrate = <$fh>;
     close($fh);
 
     chomp $Profile_Length;
+    chomp $Profile_RelativeOrientation;
     chomp $Profile_Side1;
     chomp $Profile_Side2;
     chomp $Side1_BranchDiamter;
@@ -78,6 +83,7 @@ sub fetchData
     chomp $Side2_BranchWallThickness;
     chomp $Side2_BranchMateAngle;
     chomp $Parameters_Filename;
+    chomp $Parameters_Touchoff;
     chomp $Parameters_Feedrate;
   }
   else
@@ -169,7 +175,7 @@ sub postGcode
     {
       print $fh "G20\nG64 P0.001\n";
       print $fh "G0 A$A_word $Gcode_lines[0]\n\n";
-      #Touchoff here
+      print $fh "$Parameters_Touchoff\n";
       for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
@@ -195,7 +201,8 @@ $mw->title("NotchMaster");
 $profile_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Profile', -labelside => 'acrosstop');
 $profile_frame->Label(-text => "Tube Length")->pack(-side => 'top');
 $profile_frame->Entry(-textvariable=>\$Profile_Length)->pack();
-
+$profile_frame->Label(-text => "Relative Orientation Angle")->pack(-side => 'top');
+$profile_frame->Entry(-textvariable=>\$Profile_RelativeOrientation)->pack();
 $side1_radio = $profile_frame->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Side 1', -labelside => 'acrosstop');
 foreach (qw/notch slice/) {
     $side1_radio->Radiobutton(-text => $_, -variable => \$Profile_Side1,
@@ -237,6 +244,8 @@ $side2_frame->pack(-side => 'right');
 $Paramaters_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Parameters', -labelside => 'acrosstop');
 $Paramaters_frame->Label(-text => "Filename")->pack(-side => 'top');
 $Paramaters_frame->Entry(-textvariable=>\$Parameters_Filename)->pack();
+$Paramaters_frame->Label(-text => "Touchoff Code")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_Touchoff)->pack();
 $Paramaters_frame->Label(-text => "Feedrate")->pack(-side => 'top');
 $Paramaters_frame->Entry(-textvariable=>\$Parameters_Feedrate)->pack();
 $button_frame = $Paramaters_frame->Frame(-borderwidth => 2, -relief => 'groove');
