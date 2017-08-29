@@ -3,6 +3,8 @@ use Tk;
 use Tk::LabFrame;
 use Storable;
 use Math::Trig;
+use Math::BigFloat;
+Math::BigFloat->precision(-4);
 
 my $mw = MainWindow->new;
 
@@ -135,7 +137,8 @@ sub Gcode_CalculateNotch
     $ID=$ID + 2;
     $A_Axis_Angle = $A_Axis_Angle + 2;
   	#300=[#300+2]
-    $Ysimple = sprintf("%.4f", $Y);  # 1.56
+
+    $Ysimple = Math::BigFloat->new($Y);
     #$GcodeBlock .= "G1 A$A_Axis_Angle Y$Ysimple F$Parameters_Feedrate\n";
     $Awords .= "$A_Axis_Angle\n";
     $Ywords .= "$Ysimple\n";
@@ -157,7 +160,7 @@ sub Gcode_CalculateNotch
   {
     $Yoffset = $Yword_lines[$i] - $smallestY;
    #print "Y$Yoffset\n";
-   $GcodeBlock .= "Y$Yoffset\n";
+   $GcodeBlock .= "$Yoffset\n";
   }
   return $GcodeBlock;
 }
@@ -179,7 +182,9 @@ sub postGcode
       for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
-        print $fh "G1 A$A_word $Gcode_lines[$i] F$Parameters_Feedrate\n";
+        chomp $Gcode_lines[$i];
+        $Y = Math::BigFloat->new($Gcode_lines[$i]);
+        print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
       }
       print $fh "\nM5\nM30";
       close($fh);
