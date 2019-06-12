@@ -201,25 +201,21 @@ sub postGcode
     $mw->messageBox(-title => 'Post', -message => 'Posting with Side 1 notch and Side 2 Disabled!', -type => 'ok', -default => 'ok');
     my @Gcode_lines = split /\n/, $Yoffsets;
     $A_word = 2;
-
+    $Inverse_Feedrate = Math::BigFloat->new($Parameters_Feedrate * 360);
     if (open(my $fh, '>:encoding(UTF-8)', $Parameters_Filename))
     {
-      print $fh "G20\nG64 P0.001\n";
+      print $fh "G20\nG64 P0.001\nG93\n";
       print $fh "G0 A$A_word Y$Gcode_lines[0]\n\n";
       print $fh "$Parameters_Touchoff\n";
       for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
-        if ($A_word >= 360)
-        {
-          $A_word = $A_word - 360;
-        }
         chomp $Gcode_lines[$i];
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
-        print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
+        print $fh "G1 A$A_word Y$Y F$Inverse_Feedrate\n";
       }
       print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
-      print $fh "G0 Y$Parameters_YHome\nM30\n";
+      print $fh "G0 A0 Y$Parameters_YHome\nM30\n";
       close($fh);
     }
     else
@@ -234,11 +230,11 @@ sub postGcode
     $mw->messageBox(-title => 'Post', -message => 'Posting with Side 1 Notch and Side 2 Slice!', -type => 'ok', -default => 'ok');
     my @Gcode_lines = split /\n/, $Yoffsets;
     $A_word = 2;
-
+    $Inverse_Feedrate = Math::BigFloat->new($Parameters_Feedrate * 360);
     if (open(my $fh, '>:encoding(UTF-8)', $Parameters_Filename))
     {
       #Post header
-      print $fh "G20\nG64 P0.001\n";
+      print $fh "G20\nG64 P0.001\nG93\n";
       print $fh "G0 A$A_word Y$Gcode_lines[0]\n\n";
 
       #Post Side 1 Notch
@@ -246,25 +242,20 @@ sub postGcode
       for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
-        if ($A_word >= 360)
-        {
-          $A_word = $A_word - 360;
-        }
         chomp $Gcode_lines[$i];
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
-        print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
+        print $fh "G1 A$A_word Y$Y F$Inverse_Feedrate\n";
       }
       print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
 
       #Post Side 2 Slice
       #Feedrate in deg/min = Feedrate in inches/min / (branch diameter * pie) * 360
       $Feedrate_in_deg_min = Math::BigFloat->new($Parameters_Feedrate / ($Side1_BranchDiamter * 3.14) * 360);
-      print $fh "G0 A-0 Y-$Profile_Length\n";
+      print $fh "G0 A0 Y-$Profile_Length\n";
       print $fh "$Parameters_Touchoff\n";
-      print $fh "G1 A180 F$Feedrate_in_deg_min\n";
-      print $fh "G1 A0 F$Feedrate_in_deg_min\n";
+      print $fh "G1 A360 F$Feedrate_in_deg_min\n";
       print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
-      print $fh "G0 Y$Parameters_YHome\nM30\n";
+      print $fh "G0 A0 Y$Parameters_YHome\nM30\n";
       close($fh);
     }
     else
@@ -279,7 +270,7 @@ sub postGcode
     $mw->messageBox(-title => 'Post', -message => 'Posting with Side 1 Notch and Side 2 Notch!', -type => 'ok', -default => 'ok');
     my @Gcode_lines = split /\n/, $Yoffsets;
     $A_word = 2;
-
+    $Inverse_Feedrate = Math::BigFloat->new($Parameters_Feedrate * 360);
     if (open(my $fh, '>:encoding(UTF-8)', $Parameters_Filename))
     {
       #Post header
@@ -291,13 +282,9 @@ sub postGcode
       for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
-        if ($A_word >= 360)
-        {
-          $A_word = $A_word - 360;
-        }
         chomp $Gcode_lines[$i];
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
-        print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
+        print $fh "G1 A$A_word Y$Y F$Inverse_Feedrate\n";
       }
       print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
 
@@ -305,26 +292,18 @@ sub postGcode
       $Yoffsets = Gcode_CalculateNotch($Side2_BranchDiamter, $Side2_HeaderDiamter, $Side2_BranchWallThickness, $Side2_BranchMateAngle);
       my @Gcode_lines = split /\n/, $Yoffsets;
       $A_word = 2 + $Profile_RelativeOrientation;
-      if ($A_word >= 360)
-      {
-        $A_word = $A_word - 360;
-      }
       $YStart = (Math::BigFloat->new($Gcode_lines[0]) * -1) - $Profile_Length;
       print $fh "G0 A$A_word Y$YStart\n\n";
       print $fh "$Parameters_Touchoff\n";
       for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
-        if ($A_word >= 360)
-        {
-          $A_word = $A_word - 360;
-        }
         chomp $Gcode_lines[$i];
         $Y = (Math::BigFloat->new($Gcode_lines[$i]) * -1) - $Profile_Length;
-        print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
+        print $fh "G1 A$A_word Y$Y F$Inverse_Feedrate\n";
       }
       print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
-      print $fh "G0 Y$Parameters_YHome\nM30\n";
+      print $fh "G0 A0 Y$Parameters_YHome\nM30\n";
       close($fh);
     }
     else
