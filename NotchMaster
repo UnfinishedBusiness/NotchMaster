@@ -134,6 +134,7 @@ sub Gcode_CalculateNotch
   for (my $i=0; $i < 180; $i++)
   {
     $Y = sqrt($RU **2 - (($RI * degree_sine($ID)) **2)) / degree_sine($AF) - degree_tangent(90 - $AF) * $RI * degree_cosine($ID);
+    $Y = $Y * -1;
     $ID=$ID + 2;
     $A_Axis_Angle = $A_Axis_Angle + 2;
   	#300=[#300+2]
@@ -179,9 +180,13 @@ sub postGcode
       print $fh "G20\nG64 P0.001\n";
       print $fh "G0 A$A_word Y$Gcode_lines[0]\n\n";
       print $fh "$Parameters_Touchoff\n";
-      for( $i = 1; $i < @Gcode_lines-1; $i++ )
+      for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
+        if ($A_word >= 360)
+        {
+          $A_word = $A_word - 360;
+        }
         chomp $Gcode_lines[$i];
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
         print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
@@ -210,9 +215,13 @@ sub postGcode
 
       #Post Side 1 Notch
       print $fh "$Parameters_Touchoff\n";
-      for( $i = 1; $i < @Gcode_lines-1; $i++ )
+      for( $i = 1; $i < @Gcode_lines; $i++ )
       {
         $A_word += 2;
+        if ($A_word >= 360)
+        {
+          $A_word = $A_word - 360;
+        }
         chomp $Gcode_lines[$i];
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
         print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
@@ -226,6 +235,67 @@ sub postGcode
       print $fh "$Parameters_Touchoff\n";
       print $fh "G1 A180 F$Feedrate_in_deg_min\n";
       print $fh "G1 A0 F$Feedrate_in_deg_min\n";
+      print $fh "\nM5\nM30";
+
+
+      close($fh);
+    }
+    else
+    {
+      $mw->messageBox(-title => 'Post', -message => 'Could not write file!', -type => 'ok', -default => 'ok');
+    }
+    return;
+  }
+  elsif ($Profile_Side1 eq "notch" && $Profile_Side2 eq "notch")
+  {
+    $Yoffsets = Gcode_CalculateNotch($Side1_BranchDiamter, $Side1_HeaderDiamter, $Side1_BranchWallThickness, $Side1_BranchMateAngle);
+    $mw->messageBox(-title => 'Post', -message => 'Posting with Side 1 Notch and Side 2 Notch!', -type => 'ok', -default => 'ok');
+    my @Gcode_lines = split /\n/, $Yoffsets;
+    $A_word = 2;
+
+    if (open(my $fh, '>:encoding(UTF-8)', $Parameters_Filename))
+    {
+      #Post header
+      print $fh "G20\nG64 P0.001\n";
+      print $fh "G0 A$A_word Y$Gcode_lines[0]\n\n";
+
+      #Post Side 1 Notch
+      print $fh "$Parameters_Touchoff\n";
+      for( $i = 1; $i < @Gcode_lines; $i++ )
+      {
+        $A_word += 2;
+        if ($A_word >= 360)
+        {
+          $A_word = $A_word - 360;
+        }
+        chomp $Gcode_lines[$i];
+        $Y = Math::BigFloat->new($Gcode_lines[$i]);
+        print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
+      }
+      print $fh "\nM5\n";
+
+      #Post Side 2 Notch
+      $Yoffsets = Gcode_CalculateNotch($Side2_BranchDiamter, $Side2_HeaderDiamter, $Side2_BranchWallThickness, $Side2_BranchMateAngle);
+      my @Gcode_lines = split /\n/, $Yoffsets;
+      $A_word = 2 + $Profile_RelativeOrientation;
+      if ($A_word >= 360)
+      {
+        $A_word = $A_word - 360;
+      }
+      $YStart = (Math::BigFloat->new($Gcode_lines[0]) * -1) - $Profile_Length;
+      print $fh "G0 A$A_word Y$YStart\n\n";
+      print $fh "$Parameters_Touchoff\n";
+      for( $i = 1; $i < @Gcode_lines; $i++ )
+      {
+        $A_word += 2;
+        if ($A_word >= 360)
+        {
+          $A_word = $A_word - 360;
+        }
+        chomp $Gcode_lines[$i];
+        $Y = (Math::BigFloat->new($Gcode_lines[$i]) * -1) - $Profile_Length;
+        print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
+      }
       print $fh "\nM5\nM30";
 
 
