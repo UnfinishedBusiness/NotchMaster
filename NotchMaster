@@ -9,6 +9,7 @@ Math::BigFloat->precision(-4);
 my $mw = MainWindow->new;
 
 $Profile_Length = 10;
+$Profile_RelativeOrientation = 0;
 $Profile_Side1 = "notch";
 $Profile_Side2 = "disable";
 $Side1_BranchDiamter = 1.750;
@@ -21,8 +22,14 @@ $Side2_BranchWallThickness = 0.120;
 $Side2_BranchMateAngle = 90;
 $Parameters_Filename = "/home/cnc/Desktop/Post/notch.ngc";
 $Parameters_Feedrate = 15;
-
+$Parameters_PierceHeight = 0.160;
+$Parameters_PierceDelay = 0.8;
+$Parameters_CutHeight = 0.150;
+$Parameters_ZRetract = 0.375;
+$Parameters_PostDelay = 2;
 $DataFile = "/tmp/.NotchMaster";
+$Parameters_TestRun = "no";
+$Parameters_YHome = 20;
 
 
 sub storeData
@@ -42,8 +49,13 @@ sub storeData
     print $fh "$Side2_BranchWallThickness\n";
     print $fh "$Side2_BranchMateAngle\n";
     print $fh "$Parameters_Filename\n";
-    print $fh "$Parameters_Touchoff\n";
+    print $fh "$Parameters_PierceHeight\n";
+    print $fh "$Parameters_PierceDelay\n";
+    print $fh "$Parameters_CutHeight\n";
+    print $fh "$Parameters_ZRetract\n";
+    print $fh "$Parameters_PostDelay\n";
     print $fh "$Parameters_Feedrate\n";
+    print $fh "$Parameters_YHome\n";
     close($fh);
   }
   else
@@ -68,8 +80,13 @@ sub fetchData
     $Side2_BranchWallThickness = <$fh>;
     $Side2_BranchMateAngle = <$fh>;
     $Parameters_Filename = <$fh>;
-    $Parameters_Touchoff = <$fh>;
+    $Parameters_PierceHeight = <$fh>;
+    $Parameters_PierceDelay = <$fh>;
+    $Parameters_CutHeight = <$fh>;
+    $Parameters_ZRetract = <$fh>;
+    $Parameters_PostDelay = <$fh>;
     $Parameters_Feedrate = <$fh>;
+    $Parameters_YHome = <$fh>;
     close($fh);
 
     chomp $Profile_Length;
@@ -85,8 +102,13 @@ sub fetchData
     chomp $Side2_BranchWallThickness;
     chomp $Side2_BranchMateAngle;
     chomp $Parameters_Filename;
-    chomp $Parameters_Touchoff;
+    chomp $Parameters_PierceHeight;
+    chomp $Parameters_PierceDelay;
+    chomp $Parameters_CutHeight;
+    chomp $Parameters_ZRetract;
+    chomp $Parameters_PostDelay;
     chomp $Parameters_Feedrate;
+    chomp $Parameters_YHome;
   }
   else
   {
@@ -168,6 +190,11 @@ sub Gcode_CalculateNotch
 
 sub postGcode
 {
+  $Parameters_Touchoff = "G0 Z$Parameters_CutHeight";
+  if ($Parameters_TestRun eq "no")
+  {
+    $Parameters_Touchoff = "o<touchoff> call [$Parameters_PierceHeight] [$Parameters_PierceDelay] [$Parameters_CutHeight]"
+  }
   if ($Profile_Side1 eq "notch" && $Profile_Side2 eq "disable")
   {
     $Yoffsets = Gcode_CalculateNotch($Side1_BranchDiamter, $Side1_HeaderDiamter, $Side1_BranchWallThickness, $Side1_BranchMateAngle);
@@ -191,7 +218,8 @@ sub postGcode
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
         print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
       }
-      print $fh "\nM5\nM30";
+      print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
+      print $fh "G0 Y$Parameters_YHome\nM30\n";
       close($fh);
     }
     else
@@ -226,7 +254,7 @@ sub postGcode
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
         print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
       }
-      print $fh "\nM5\n";
+      print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
 
       #Post Side 2 Slice
       #Feedrate in deg/min = Feedrate in inches/min / (branch diameter * pie) * 360
@@ -235,9 +263,8 @@ sub postGcode
       print $fh "$Parameters_Touchoff\n";
       print $fh "G1 A180 F$Feedrate_in_deg_min\n";
       print $fh "G1 A0 F$Feedrate_in_deg_min\n";
-      print $fh "\nM5\nM30";
-
-
+      print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
+      print $fh "G0 Y$Parameters_YHome\nM30\n";
       close($fh);
     }
     else
@@ -272,7 +299,7 @@ sub postGcode
         $Y = Math::BigFloat->new($Gcode_lines[$i]);
         print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
       }
-      print $fh "\nM5\n";
+      print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
 
       #Post Side 2 Notch
       $Yoffsets = Gcode_CalculateNotch($Side2_BranchDiamter, $Side2_HeaderDiamter, $Side2_BranchWallThickness, $Side2_BranchMateAngle);
@@ -296,9 +323,8 @@ sub postGcode
         $Y = (Math::BigFloat->new($Gcode_lines[$i]) * -1) - $Profile_Length;
         print $fh "G1 A$A_word Y$Y F$Parameters_Feedrate\n";
       }
-      print $fh "\nM5\nM30";
-
-
+      print $fh "\nM5\nG4 P$Parameters_PostDelay\nG0 Z$Parameters_ZRetract\n";
+      print $fh "G0 Y$Parameters_YHome\nM30\n";
       close($fh);
     }
     else
@@ -313,7 +339,7 @@ sub postGcode
 
 fetchData();
 
-$mw->title("NotchMaster");
+$mw->title("Xmotion NotchMaster");
 #$mw->geometry ("900x600");
 $profile_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Profile', -labelside => 'acrosstop');
 $profile_frame->Label(-text => "Tube Length")->pack(-side => 'top');
@@ -361,13 +387,24 @@ $side2_frame->pack(-side => 'right');
 $Paramaters_frame = $mw->LabFrame(-borderwidth => 2, -relief => 'groove', -label => 'Parameters', -labelside => 'acrosstop');
 $Paramaters_frame->Label(-text => "Filename")->pack(-side => 'top');
 $Paramaters_frame->Entry(-textvariable=>\$Parameters_Filename)->pack();
-$Paramaters_frame->Label(-text => "Touchoff Code")->pack(-side => 'top');
-$Paramaters_frame->Entry(-textvariable=>\$Parameters_Touchoff)->pack();
-$Paramaters_frame->Label(-text => "Feedrate")->pack(-side => 'top');
+$Paramaters_frame->Label(-text => "Pierce Height")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_PierceHeight)->pack();
+$Paramaters_frame->Label(-text => "Pierce Delay")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_PierceDelay)->pack();
+$Paramaters_frame->Label(-text => "Cut Height")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_CutHeight)->pack();
+$Paramaters_frame->Label(-text => "Cut Feedrate")->pack(-side => 'top');
 $Paramaters_frame->Entry(-textvariable=>\$Parameters_Feedrate)->pack();
+$Paramaters_frame->Label(-text => "Z Retract Clearance")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_ZRetract)->pack();
+$Paramaters_frame->Label(-text => "Post Cut Delay (Sec)")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_PostDelay)->pack();
+$Paramaters_frame->Label(-text => "Y Home")->pack(-side => 'top');
+$Paramaters_frame->Entry(-textvariable=>\$Parameters_YHome)->pack();
 $button_frame = $Paramaters_frame->Frame(-borderwidth => 2, -relief => 'groove');
 $button_frame->Button(-text => 'Quit', -command => sub { storeData(); exit; })->pack(-side => 'left');
-$button_frame->Button(-text => 'Post', -command => sub { storeData(); postGcode(); })->pack(-side => 'right');
+$button_frame->Button(-text => 'Post Testrun', -command => sub { $Parameters_TestRun = "yes"; storeData(); postGcode(); })->pack(-side => 'right');
+$button_frame->Button(-text => 'Post Cut', -command => sub { $Parameters_TestRun = "no"; storeData(); postGcode(); })->pack(-side => 'right');
 $button_frame->pack;
 $Paramaters_frame->pack(-side => 'bottom');
 
